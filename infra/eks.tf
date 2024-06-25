@@ -1,16 +1,20 @@
 module "eks" {
-  source = "terraform-aws-modules/eks/aws"
+  source  = "terraform-aws-modules/eks/aws"
   version = "20.14.0"
 
-  cluster_name    = local.cluster_name
-  cluster_version = "1.29"
+  cluster_name              = local.cluster_name
+  cluster_version           = "1.29"
   cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
-  cluster_endpoint_public_access = true
+  cluster_endpoint_public_access  = true
   cluster_endpoint_private_access = true
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
+
+  # iam_role_additional_policies = [
+  #   aws_iam_policy.route53,
+  # ]
 
   eks_managed_node_group_defaults = {
     disk_size = 50
@@ -75,19 +79,73 @@ module "eks" {
   }
 }
 
+resource "aws_iam_role_policy_attachment" "route53" {
+  for_each = module.eks.eks_managed_node_groups
+
+  policy_arn = aws_iam_policy.route53.arn
+  role       = each.value.iam_role_name
+}
+
+# policy for route 53
+data "aws_iam_policy_document" "route53" {
+  statement {
+    actions = ["*"]
+
+    resources = [
+      data.aws_route53_zone.zone.arn,
+    ]
+  }
+}
+
+resource "aws_iam_policy" "route53" {
+  name        = "route53"
+  description = "Allows EKS to manage Route53"
+  policy      = data.aws_iam_policy_document.route53.json
+}
+
+
+# policy for ACM
+
+data "aws_iam_policy_document" "acm" {
+  statement {
+    actions = [
+      "acm:DescribeCertificate",
+      "acm:ListCertificates",
+      "acm:GetCertificate",
+      "acm:RequestCertificate",
+      "acm:DeleteCertificate",
+    ]
+
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "acm" {
+  name        = "acm"
+  description = "Allows EKS to manage ACM"
+  policy      = data.aws_iam_policy_document.acm.json
+}
+
+resource "aws_iam_role_policy_attachment" "acm" {
+  for_each = module.eks.eks_managed_node_groups
+
+  policy_arn = aws_iam_policy.acm.arn
+  role       = each.value.iam_role_name
+}
+
 resource "aws_iam_role" "eks_admin" {
   name = "eks_admin"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement: [
-        {
-          Effect: "Allow",
-          Principal: {
-            Service: "eks.amazonaws.com"
-          },
-          Action: "sts:AssumeRole"
-        }
-      ]
+    Statement : [
+      {
+        Effect : "Allow",
+        Principal : {
+          Service : "eks.amazonaws.com"
+        },
+        Action : "sts:AssumeRole"
+      }
+    ]
   })
 }
 
@@ -98,9 +156,9 @@ data "aws_eks_cluster_auth" "cluster_auth" {
 
 provider "kubernetes" {
   # config_path = "~/.kube/config"
-  host = module.eks.cluster_endpoint
+  host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  token = data.aws_eks_cluster_auth.cluster_auth.token
+  token                  = data.aws_eks_cluster_auth.cluster_auth.token
 }
 
 provider "helm" {

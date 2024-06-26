@@ -28,7 +28,7 @@ module "ec2_instance" {
 resource "aws_security_group" "bastion" {
   name        = "bastion-sg"
   description = "Security group for Bastion jump host"
-  vpc_id = module.vpc.vpc_id
+  vpc_id      = module.vpc.vpc_id
 
   # Allow inbound ICMP traffic from anywhere
   ingress {
@@ -55,15 +55,11 @@ resource "aws_security_group" "bastion" {
   }
 }
 
-data "aws_route53_zone" "wiktorkowalski" {
-  name = "wiktorkowalski.pl"
-}
-
 resource "aws_route53_record" "bastion" {
-  depends_on = [ module.ec2_instance ]
-  zone_id = data.aws_route53_zone.wiktorkowalski.zone_id
-  name    = "bastion.aws.${data.aws_route53_zone.wiktorkowalski.name}"
-  type    = "A"
-  ttl     = 300
-  records = [module.ec2_instance.public_ip]
+  depends_on = [module.ec2_instance]
+  zone_id    = data.aws_route53_zone.wiktorkowalski.zone_id
+  name       = "bastion.aws.${data.aws_route53_zone.wiktorkowalski.name}"
+  type       = "A"
+  ttl        = 300
+  records    = [module.ec2_instance.public_ip]
 }

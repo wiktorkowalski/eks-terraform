@@ -10,7 +10,7 @@ module "vpc" {
   private_subnets = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
 
   database_subnets = ["10.0.7.0/24", "10.0.8.0/24", "10.0.9.0/24"]
-  database_subnet_enable_resource_name_dns_a_record_on_launch = true
+  # database_subnet_enable_resource_name_dns_a_record_on_launch = true
   create_database_subnet_group = true
 
   enable_nat_gateway     = true

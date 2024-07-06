@@ -19,9 +19,8 @@ module "ec2_instance" {
   subnet_id                   = module.vpc.public_subnets[0]
   associate_public_ip_address = true
 
-  tags = {
-    Terraform   = "true"
-    Environment = "dev"
+  instance_tags = {
+    name        = "bastion"
   }
 }
 
@@ -56,9 +55,12 @@ resource "aws_security_group" "bastion" {
 }
 
 resource "aws_route53_record" "bastion" {
-  depends_on = [module.ec2_instance]
+  depends_on = [
+    module.ec2_instance,
+    module.ec2_instance.public_ip
+  ]
   zone_id    = data.aws_route53_zone.wiktorkowalski.zone_id
-  name       = "bastion.aws.${data.aws_route53_zone.wiktorkowalski.name}"
+  name       = "bastion.${aws_route53_zone.aws.name}"
   type       = "A"
   ttl        = 300
   records    = [module.ec2_instance.public_ip]

@@ -12,21 +12,28 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  # iam_role_additional_policies = [
-  #   aws_iam_policy.route53,
-  # ]
-
   eks_managed_node_group_defaults = {
-    disk_size = 50
+    disk_size = 20
   }
 
   eks_managed_node_groups = {
-    spot = {
-      min_size     = 1
-      desired_size = 2
+    main = {
+      name         = "main"
+      min_size     = 0
       max_size     = 4
 
-      instance_types = ["m7g.large", "m7g.xlarge"]
+      instance_types = ["m7g.medium"]
+      capacity_type  = "SPOT" # "ON_DEMAND"
+      ami_type       = "AL2_ARM_64"
+    }
+    spot = {
+      name         = "spot"
+      min_size     = 0
+      # desired_size = 2
+      max_size     = 4
+
+      instance_types = ["m7g.large"]
+      # instance_types = ["m7g.large", "m7g.xlarge"]
       capacity_type  = "SPOT"
       ami_type       = "AL2_ARM_64"
     }
@@ -40,9 +47,16 @@ module "eks" {
   # https://docs.aws.amazon.com/eks/latest/userguide/eks-add-ons.html
   cluster_addons = {
     vpc-cni = {
-      most_recent = true
-      # resolve_conflicts        = "OVERWRITE"
-      # before_compute = true
+      most_recent       = true
+      before_compute    = true
+      resolve_conflicts = "OVERWRITE"
+      configuration_values = jsonencode({
+        env = {
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
+        }
+      })
+
       # https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
       # addon_version            = "v1.18.2-eksbuild.1"
     }
@@ -92,7 +106,7 @@ data "aws_iam_policy_document" "route53" {
     actions = ["*"]
 
     resources = [
-      data.aws_route53_zone.zone.arn,
+      aws_route53_zone.aws.arn,
     ]
   }
 }
@@ -154,17 +168,17 @@ data "aws_eks_cluster_auth" "cluster_auth" {
   name       = module.eks.cluster_name
 }
 
-provider "kubernetes" {
-  # config_path = "~/.kube/config"
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  token                  = data.aws_eks_cluster_auth.cluster_auth.token
-}
+# provider "kubernetes" {
+#   # config_path = "~/.kube/config"
+#   host                   = module.eks.cluster_endpoint
+#   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+#   token                  = data.aws_eks_cluster_auth.cluster_auth.token
+# }
 
-provider "helm" {
-  kubernetes {
-    host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-    token                  = data.aws_eks_cluster_auth.cluster_auth.token
-  }
-}
+# provider "helm" {
+#   kubernetes {
+#     host                   = module.eks.cluster_endpoint
+#     cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+#     token                  = data.aws_eks_cluster_auth.cluster_auth.token
+#   }
+# }

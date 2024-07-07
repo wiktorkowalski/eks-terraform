@@ -57,11 +57,11 @@ resource "aws_security_group" "bastion" {
 resource "aws_route53_record" "bastion" {
   depends_on = [
     module.ec2_instance,
-    module.ec2_instance.public_ip
+    module.ec2_instance.public_dns
   ]
   zone_id    = data.aws_route53_zone.wiktorkowalski.zone_id
   name       = "bastion.${aws_route53_zone.aws.name}"
-  type       = "A"
+  type       = "CNAME"
   ttl        = 300
-  records    = [module.ec2_instance.public_ip]
+  records    = [module.ec2_instance.public_dns]
 }

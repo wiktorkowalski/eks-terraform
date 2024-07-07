@@ -4,6 +4,7 @@ data "aws_route53_zone" "wiktorkowalski" {
 
 resource "aws_route53_zone" "aws" {
   name = "aws.wiktorkowalski.pl"
+  force_destroy = false
 }
 
 resource "aws_route53_record" "test" {

@@ -54,9 +54,15 @@ resource "aws_security_group" "bastion" {
   }
 }
 
+# resource "null_resource" "wait_for_public_dns" {
+#   provisioner "local-exec" {
+#     command = "while [ -z \"$(aws ec2 describe-instances --instance-id ${module.ec2_instance.id} --query 'Reservations[0].Instances[0].PublicDnsName' --output text)\" ]; do sleep 5; done"
+#   }
+# }
+
 resource "aws_route53_record" "bastion" {
   depends_on = [
-    module.ec2_instance,
+    # null_resource.wait_for_public_dns,
     module.ec2_instance.public_dns
   ]
   zone_id    = data.aws_route53_zone.wiktorkowalski.zone_id

@@ -65,7 +65,7 @@ resource "aws_route53_record" "bastion" {
     # null_resource.wait_for_public_dns,
     module.ec2_instance.public_dns
   ]
-  zone_id    = data.aws_route53_zone.wiktorkowalski.zone_id
+  zone_id    = aws_route53_zone.aws.zone_id
   name       = "bastion.${aws_route53_zone.aws.name}"
   type       = "CNAME"
   ttl        = 300

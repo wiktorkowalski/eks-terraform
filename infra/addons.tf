@@ -24,18 +24,44 @@ module "eks_blueprints_addons" {
   # enable_karpenter                       = true
   enable_kube_prometheus_stack          = true
   enable_metrics_server                 = true
-  enable_external_dns                   = true
   enable_cert_manager                   = true
+  
+  
+  enable_external_dns                   = true
+  external_dns_route53_zone_arns        = [aws_route53_zone.aws.arn]
+  external_dns = {
+    set = [
+      {
+        name = "policy"
+        value = "sync"
+      }
+    ]
+  }
+  
   enable_argocd                         = true
-
   argocd = {
     namespace = "argocd"
     name = "argocd"
     chart_version = "7.3.10"
+
+    values = [
+<<EOF
+global:
+  configs:
+    params:
+      server.insecure: true
+EOF
+    ]
+
+    set = [
+        {
+            name = "server.insecure"
+            value = "true"
+        }
+    ]
   }
   
   cert_manager_route53_hosted_zone_arns = [aws_route53_zone.aws.arn]
-  external_dns_route53_zone_arns        = [aws_route53_zone.aws.arn]
 
   providers = {
     kubernetes = kubernetes

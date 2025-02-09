@@ -3,13 +3,8 @@ kind: Kustomization
 
 namespace: argocd
 
-helmCharts:
-  - name: argocd
-    version: 7.3.10
-    releaseName: argo-cd
-    repo: https://argoproj.github.io/argo-helm
-    
-
 resources:
+  - namespace.yml
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v2.14.2/manifests/install.yaml
   - repo-secret.yml
   - application.yml

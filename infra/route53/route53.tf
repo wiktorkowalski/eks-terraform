@@ -3,7 +3,7 @@ data "aws_route53_zone" "wiktorkowalski" {
 }
 
 resource "aws_route53_zone" "aws" {
-  name = "aws.wiktorkowalski.pl"
+  name          = "aws.wiktorkowalski.pl"
   force_destroy = false
   lifecycle {
     prevent_destroy = true

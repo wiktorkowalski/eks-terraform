@@ -1,6 +1,6 @@
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "5.7.0"
+  version = "5.19.0"
 
   name = "${local.cluster_name}-vpc"
   cidr = "10.0.0.0/16"
@@ -13,15 +13,15 @@ module "vpc" {
   # database_subnet_enable_resource_name_dns_a_record_on_launch = true
   create_database_subnet_group = true
 
-  enable_nat_gateway     = true
-  single_nat_gateway     = true
-  one_nat_gateway_per_az = false
-  enable_vpn_gateway     = false
+  enable_nat_gateway               = true
+  single_nat_gateway               = true
+  one_nat_gateway_per_az           = false
+  enable_vpn_gateway               = false
   default_vpc_enable_dns_hostnames = true
   default_vpc_enable_dns_support   = true
 
-  enable_dns_support     = true
-  enable_dns_hostnames   = true
+  enable_dns_support   = true
+  enable_dns_hostnames = true
 
   public_subnet_tags = {
     "kubernetes.io/cluster/${local.cluster_name}" = "shared"

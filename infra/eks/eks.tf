@@ -1,16 +1,16 @@
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "20.14.0"
+  version = "20.34.0"
 
   cluster_name              = local.cluster_name
-  cluster_version           = "1.29"
+  cluster_version           = "1.30"
   cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
   cluster_endpoint_public_access  = true
   cluster_endpoint_private_access = true
 
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
+  vpc_id     = data.aws_vpc.vpc.id
+  subnet_ids = data.aws_subnets.private.ids
 
   eks_managed_node_group_defaults = {
     disk_size = 20
@@ -18,24 +18,24 @@ module "eks" {
 
   eks_managed_node_groups = {
     main = {
-      name         = "main"
-      min_size     = 0
-      max_size     = 4
+      name     = "main"
+      min_size = 0
+      max_size = 4
 
       instance_types = ["m7g.medium"]
-      capacity_type  = "SPOT" # "ON_DEMAND"
+      capacity_type  = "SPOT" #  should be "ON_DEMAND" once we run this for real
       ami_type       = "AL2_ARM_64"
     }
     spot = {
-      name         = "spot"
-      min_size     = 0
+      name     = "spot"
+      min_size = 0
       # desired_size = 2
-      max_size     = 4
+      max_size = 4
 
       instance_types = ["m7g.large"]
       # instance_types = ["m7g.large", "m7g.xlarge"]
-      capacity_type  = "SPOT"
-      ami_type       = "AL2_ARM_64"
+      capacity_type = "SPOT"
+      ami_type      = "AL2_ARM_64"
     }
   }
 
@@ -106,7 +106,7 @@ data "aws_iam_policy_document" "route53" {
     actions = ["*"]
 
     resources = [
-      aws_route53_zone.aws.arn,
+      data.aws_route53_zone.aws.arn,
     ]
   }
 }

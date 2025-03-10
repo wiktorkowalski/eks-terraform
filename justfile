@@ -2,8 +2,8 @@ set quiet := true
 
 # folders := "vpc route53 acm ec2 rds eks"
 # foldersReversed := "eks rds ec2 acm route53 vpc"
-folders := "vpc"
-foldersReversed := "vpc"
+folders := "vpc route53 eks"
+foldersReversed := "eks route53 vpc"
 
 default: 
   just --list

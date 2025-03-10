@@ -8,10 +8,10 @@ spec:
   source:
     repoURL: https://github.com/wiktorkowalski/eks-terraform.git
     targetRevision: HEAD
-    path: k8s/addons/tempo/
+    path: k8s/kube-prometheus-stack/
   destination:
     server: https://kubernetes.default.svc
-    namespace: monitoring
+    namespace: kube-prometheus-stack
   syncPolicy:
     automated:
       prune: true

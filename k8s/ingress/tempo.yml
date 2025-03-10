@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tempo-ingress
+  namespace: kube-prometheus-stack
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/group.name: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}, {"HTTP":80}]'
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: "/ready"
+    external-dns.alpha.kubernetes.io/hostname: tempo.aws.wiktorkowalski.pl
+spec:
+  ingressClassName: alb
+  tls:
+    - hosts:
+        - tempo.aws.wiktorkowalski.pl
+  rules:
+    - host: tempo.aws.wiktorkowalski.pl
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tempo-query-frontend
+                port:
+                  number: 3100

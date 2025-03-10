@@ -1,0 +1,22 @@
+grafana:
+  enabled: true
+  adminPassword: admin
+  service:
+    type: ClusterIP
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      url: http://loki-gateway.kube-prometheus-stack.svc.cluster.local
+      access: proxy
+    - name: Tempo
+      type: tempo
+      url: http://tempo-query-frontend.kube-prometheus-stack.svc.cluster.local:3100
+      access: proxy
+prometheus:
+  enabled: true
+  service:
+    type: ClusterIP
+alertmanager:
+  enabled: true
+  service:
+    type: ClusterIP

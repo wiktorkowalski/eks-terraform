@@ -4,5 +4,6 @@ kind: Kustomization
 namespace: monitoring
 
 resources:
+  - namespace.yml
   - https://raw.githubusercontent.com/grafana/grafana/v10.2.3/packaging/kubernetes/kustomization/deployment/kustomization.yaml
   - application.yml

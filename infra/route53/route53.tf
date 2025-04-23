@@ -16,4 +16,8 @@ resource "aws_route53_record" "ns" {
   type    = "NS"
   ttl     = 300
   records = aws_route53_zone.aws.name_servers
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }

@@ -1,18 +1,18 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: metrics-server
+  name: kubernetes-dashboard
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/wiktorkowalski/eks-terraform.git
     targetRevision: HEAD
-    path: k8s/addons/metrics-server/
+    path: k8s/dashboard/
   destination:
     server: https://kubernetes.default.svc
-    namespace: kube-system
-  # syncPolicy:
-  #   automated:
-  #     prune: true
-  #     selfHeal: true
+    namespace: kubernetes-dashboard
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

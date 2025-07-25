@@ -18,21 +18,22 @@ module "eks" {
 
   eks_managed_node_groups = {
     main = {
-      name     = "main"
-      min_size = 0
-      max_size = 4
+      name         = "main"
+      min_size     = 0
+      desired_size = 1
+      max_size     = 4
 
-      instance_types = ["m7g.medium"]
+      instance_types = ["m6g.medium"]
       capacity_type  = "SPOT" #  should be "ON_DEMAND" once we run this for real
       ami_type       = "AL2_ARM_64"
     }
     spot = {
-      name     = "spot"
-      min_size = 0
-      # desired_size = 2
-      max_size = 4
+      name         = "spot"
+      min_size     = 0
+      desired_size = 1
+      max_size     = 4
 
-      instance_types = ["m7g.large"]
+      instance_types = ["m6g.large"]
       # instance_types = ["m7g.large", "m7g.xlarge"]
       capacity_type = "SPOT"
       ami_type      = "AL2_ARM_64"

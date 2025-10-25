@@ -4,6 +4,9 @@ kind: Kustomization
 namespace: traefik-system
 
 resources:
+  # Traefik CRDs (must be first)
+  - base/crds.yaml
+
   # Base Traefik components
   - base/namespace.yaml
   - base/rbac.yaml

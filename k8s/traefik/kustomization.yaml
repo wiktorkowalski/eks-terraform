@@ -14,16 +14,14 @@ resources:
   - base/service.yaml
   - base/daemonset.yaml
 
-  # Middlewares
+  # Middlewares (used across namespaces)
   - config/middleware-secure-headers.yaml
   - config/middleware-redirect-https.yaml
   - config/middleware-rate-limit.yaml
   - config/middleware-compress.yaml
   - config/tls-options.yaml
 
-  # IngressRoutes
-  - config/ingressroutes/argocd.yaml
-  - config/ingressroutes/grafana.yaml
-  - config/ingressroutes/prometheus.yaml
-  - config/ingressroutes/alertmanager.yaml
-  - config/ingressroutes/dashboard.yaml
+  # IngressRoutes are managed by their respective apps:
+  # - ArgoCD IngressRoute: managed by argocd app
+  # - Monitoring IngressRoutes: managed by monitoring apps
+  # - Dashboard IngressRoute: managed by dashboard app

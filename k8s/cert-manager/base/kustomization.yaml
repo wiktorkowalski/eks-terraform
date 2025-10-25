@@ -7,3 +7,13 @@ resources:
   # namespace is included in install.yaml
   - install.yaml
   - cluster-issuer.yaml
+
+# Patch cert-manager service account with IAM role annotation for IRSA
+patches:
+  - target:
+      kind: ServiceAccount
+      name: cert-manager
+    patch: |-
+      - op: add
+        path: /metadata/annotations/eks.amazonaws.com~1role-arn
+        value: arn:aws:iam::942892246732:role/eks-terraform-cert-manager

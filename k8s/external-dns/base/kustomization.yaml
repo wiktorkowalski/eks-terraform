@@ -7,3 +7,13 @@ resources:
   - namespace.yaml
   - rbac.yaml
   - deployment.yaml
+
+# Patch external-dns service account with IAM role annotation for IRSA
+patches:
+  - target:
+      kind: ServiceAccount
+      name: external-dns
+    patch: |-
+      - op: add
+        path: /metadata/annotations/eks.amazonaws.com~1role-arn
+        value: arn:aws:iam::942892246732:role/eks-terraform-external-dns

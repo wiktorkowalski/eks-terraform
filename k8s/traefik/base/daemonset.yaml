@@ -47,7 +47,7 @@ spec:
               containerPort: 8443
               protocol: TCP
             - name: metrics
-              containerPort: 8080
+              containerPort: 9080
               protocol: TCP
           env:
             - name: AWS_REGION

@@ -24,7 +24,7 @@ data:
           tls:
             certResolver: letsencrypt
       metrics:
-        address: ":8080"
+        address: ":9080"
 
     providers:
       kubernetesCRD:

@@ -21,6 +21,6 @@ spec:
       nodePort: 30443
       protocol: TCP
     - name: metrics
-      port: 8080
+      port: 9080
       targetPort: metrics
       protocol: TCP

@@ -2,8 +2,9 @@
 
 **Goal**: Production-ready EKS cluster with full GitOps, cost-optimized autoscaling, and complete observability
 
-**Cost Savings**: 35-55% reduction in infrastructure costs
-**Timeline**: 2-3 weeks for full implementation
+**Deployment Type**: Fresh cluster deployment (no migration needed)
+**Cost Savings**: 35-55% reduction in infrastructure costs vs traditional setup
+**Timeline**: 2-4 hours for infrastructure + GitOps setup
 
 ---
 
@@ -70,12 +71,13 @@ Traefik DaemonSet (all nodes, NodePort 30080/30443)
 - **DNS**: External-DNS for automatic Route53 updates
 
 ### Key Decisions
+- ✅ **Fresh deployment** - No migration, clean architecture from day 1
 - ✅ Kustomize manifests in Git, deployed via ArgoCD
 - ✅ Traefik DaemonSet on all nodes (NodePort 30080/30443)
 - ✅ ArgoCD self-managed (bootstrap via `kubectl apply`)
-- ✅ Full migration from EKS Blueprints to ArgoCD
+- ✅ **All components via GitOps** - No EKS Blueprints addons except Karpenter + metrics-server
 - ✅ Native Karpenter node registration (no Lambda)
-- ✅ Remove AWS Load Balancer Controller after Traefik stable
+- ✅ **Small bootstrap node** (t4g.small) for initial setup, removed after 24-48h
 - ✅ Traefik IngressRoute CRDs (not standard Ingress)
 - ✅ Kubernetes Dashboard included
 - ✅ kube-prometheus-stack pre-rendered from Helm to Kustomize YAML
@@ -258,307 +260,162 @@ eks-terraform/
 
 ## Implementation Phases
 
-### Phase 1: Terraform Infrastructure
+**Simplified 2-Phase Approach** - Fresh deployment with no migration
 
-**Objective**: Enable Karpenter, create NLB, prepare for ArgoCD migration
+### Phase 1: Terraform Infrastructure (30-45 minutes)
 
-**Terraform Changes:**
+**Objective**: Deploy complete EKS infrastructure with Karpenter and NLB
 
-1. **`infra/addons.tf`** - Update EKS Blueprints:
-   - Enable Karpenter with ECR auth
-   - **Disable**: `enable_kube_prometheus_stack = false`
-   - **Disable**: `enable_argocd = false`
-   - **Disable**: `enable_aws_load_balancer_controller = false`
-   - Keep: `enable_cert_manager = true` (temporarily, will migrate later)
-   - Keep: `enable_external_dns = true` (temporarily, will migrate later)
-   - Keep: `enable_metrics_server = true`
+**What Gets Deployed:**
 
-2. **`infra/eks/eks.tf`** - Karpenter support:
-   - Add security group rules (port 8443)
-   - Add node security group tags for Karpenter discovery
-   - Tag existing managed node groups (will remove later)
+1. **EKS Cluster** (Kubernetes 1.30)
+   - 1 small bootstrap node (t4g.small SPOT) with taint
+   - Karpenter enabled via EKS Blueprints
+   - Metrics-server enabled
+   - All other addons disabled (deployed via ArgoCD)
 
-3. **`infra/eks/nlb.tf`** (NEW FILE):
-   - Create NLB in public subnets
-   - Create target groups (30080 HTTP, 30443 HTTPS)
-   - Create listeners (80, 443)
-   - Health checks pointing to Traefik `/ping` endpoint
+2. **Network Load Balancer**
+   - Public-facing NLB in public subnets
+   - Target groups for HTTP (30080) and HTTPS (30443)
+   - TCP listeners on ports 80 and 443
+   - Health checks to Traefik `/ping`
+   - Bootstrap node auto-registered to target groups
 
-4. **`infra/vpc/vpc.tf`** - Add Karpenter discovery tags:
-   - Public subnets: `karpenter.sh/discovery = local.cluster_name`
-   - Private subnets: `karpenter.sh/discovery = local.cluster_name`
+3. **VPC Tagging**
+   - Subnets tagged with `karpenter.sh/discovery`
+   - Security groups tagged for Karpenter
 
-5. **`infra/route53/route53.tf`** - Wildcard DNS:
-   - Add A record: `*.aws.wiktorkowalski.pl` → NLB alias
+4. **Route53**
+   - Wildcard A record: `*.aws.wiktorkowalski.pl` → NLB
 
-**Apply:**
+**Terraform Files Modified:**
+- ✅ `infra/main.tf` - Added us-east-1 provider + ECR auth token
+- ✅ `infra/addons.tf` - Enabled Karpenter only, disabled all other addons
+- ✅ `infra/eks/eks.tf` - Bootstrap node + Karpenter security group rules
+- ✅ `infra/eks/nlb.tf` - NEW: NLB with target groups
+- ✅ `infra/eks/data.tf` - Added public subnets data source
+- ✅ `infra/vpc/vpc.tf` - Added Karpenter discovery tags
+- ✅ `infra/route53/data.tf` - NEW: NLB lookup data source
+- ✅ `infra/route53/route53.tf` - Wildcard DNS record
+
+**Apply Infrastructure:**
 ```bash
-just apply  # Runs terraform across all modules
+cd /path/to/eks-terraform
+just apply  # Runs terraform init + plan + apply across all modules
 ```
 
+**Expected Duration:** 30-45 minutes (EKS cluster creation takes ~15-20 mins)
+
 **Deliverables:**
-- ✅ Karpenter enabled via EKS Blueprints
-- ✅ NLB created with target groups
-- ✅ VPC subnets tagged for Karpenter discovery
-- ✅ Route53 wildcard record pointing to NLB
-- ✅ EKS Blueprints ArgoCD/monitoring disabled
+- ✅ EKS cluster running with 1 bootstrap node
+- ✅ Karpenter installed and ready
+- ✅ NLB created and healthy
+- ✅ DNS wildcard record active
+- ✅ Ready for ArgoCD bootstrap
 
 ---
 
-### Phase 2: ArgoCD Bootstrap
+### Phase 2: ArgoCD Bootstrap + GitOps (Auto-deploys everything)
 
-**Objective**: Deploy ArgoCD manually, enable self-management
+**Objective**: Bootstrap ArgoCD, then let GitOps deploy all remaining components
+
+**Duration:** 5-10 minutes manual work + 20-30 minutes auto-deployment
 
 **Steps:**
 
-1. **Create ArgoCD manifests in Git**:
-   - `k8s/argocd/base/` - ArgoCD installation
-   - `k8s/argocd/apps/` - Root app-of-apps
+1. **Configure kubectl** (if not already):
+   ```bash
+   aws eks update-kubeconfig --name eks-terraform --region eu-west-1
+   kubectl get nodes  # Verify connectivity
+   ```
 
-2. **Bootstrap ArgoCD** (one-time manual operation):
+2. **Create ArgoCD manifests** (once, in Git):
+   ```bash
+   # Structure already defined in docs/IMPLEMENTATION-OVERVIEW.md
+   # Create k8s/argocd/base/ and k8s/argocd/apps/
+   ```
+
+3. **Bootstrap ArgoCD** (one-time manual kubectl):
    ```bash
    kubectl apply -k k8s/argocd/base/
-   ```
 
-3. **Wait for ArgoCD ready**:
-   ```bash
+   # Wait for ArgoCD ready
    kubectl wait --for=condition=available deployment/argocd-server -n argocd --timeout=300s
-   ```
 
-4. **Get admin password**:
-   ```bash
+   # Get admin password
    kubectl -n argocd get secret argocd-initial-admin-secret \
      -o jsonpath="{.data.password}" | base64 -d
    ```
 
-5. **Deploy root app** (enables GitOps for everything):
+4. **Deploy root app-of-apps** (enables GitOps for everything):
    ```bash
    kubectl apply -k k8s/argocd/apps/
    ```
 
-6. **Verify ArgoCD manages itself**:
-   - Check `k8s/argocd-apps/argocd-app.yaml` is synced
-   - ArgoCD now watches Git repo for all Application definitions
+5. **Watch ArgoCD auto-deploy everything**:
+   ```bash
+   # Port-forward to ArgoCD UI
+   kubectl port-forward -n argocd svc/argocd-server 8080:443
+
+   # Open https://localhost:8080
+   # Login with admin + password from step 3
+   # Watch all applications sync automatically
+   ```
+
+**What ArgoCD Auto-Deploys:**
+
+From `k8s/argocd-apps/` directory:
+- ✅ **ArgoCD** (self-managed)
+- ✅ **Karpenter** - 3 NodePools (general, stateful, system)
+- ✅ **Traefik** - DaemonSet with middlewares + IngressRoutes
+- ✅ **Cert-Manager** - Let's Encrypt ClusterIssuer
+- ✅ **External-DNS** - Route53 integration
+- ✅ **Monitoring** - Prometheus, Grafana, Loki, Tempo, Promtail, Alertmanager
+- ✅ **Kubernetes Dashboard**
 
 **Deliverables:**
-- ✅ ArgoCD running in cluster
-- ✅ ArgoCD UI accessible (port-forward for now, ingress in Phase 3)
-- ✅ Root app-of-apps deployed
-- ✅ ArgoCD self-management enabled
-- ✅ All applications defined in `k8s/argocd-apps/` auto-deploy
-
----
-
-### Phase 3: Infrastructure Components (via ArgoCD)
-
-**Objective**: Deploy Karpenter, Traefik, Cert-Manager, External-DNS via GitOps
-
-**What ArgoCD Deploys** (automatically from `k8s/argocd-apps/`):
-
-1. **Karpenter**:
-   - 3 NodePools (general-purpose, stateful, system)
-   - 3 EC2NodeClasses
-   - Auto-provisions nodes based on workload requirements
-
-2. **Traefik**:
-   - DaemonSet on all nodes
-   - NodePort service (30080, 30443)
-   - Middlewares (secure headers, rate limit, HTTPS redirect)
-   - IngressRoutes for services
-
-3. **Cert-Manager**:
-   - CRDs and components
-   - ClusterIssuer for Let's Encrypt (DNS-01 challenge via Route53)
-   - Auto-issues certificates for IngressRoutes
-
-4. **External-DNS**:
-   - Watches IngressRoutes
-   - Auto-updates Route53 records
-
-**Git Commit Triggers Deployment:**
-```bash
-git add k8s/karpenter/ k8s/traefik/ k8s/cert-manager/ k8s/external-dns/
-git commit -m "Add infrastructure components"
-git push
-# ArgoCD auto-syncs and deploys
-```
-
-**Validation:**
-```bash
-# Check all apps synced
-kubectl get applications -n argocd
-
-# Verify Karpenter
-kubectl get nodepools
-kubectl get nodes -L karpenter.sh/nodepool
-
-# Verify Traefik
-kubectl get pods -n traefik-system -o wide
-kubectl get svc -n traefik-system
-
-# Test ingress
-curl -I https://argocd.aws.wiktorkowalski.pl
-```
-
-**Deliverables:**
-- ✅ Karpenter provisioning nodes
-- ✅ Traefik DaemonSet handling ingress
-- ✅ Cert-Manager issuing TLS certificates
-- ✅ External-DNS updating Route53
+- ✅ All infrastructure components running
+- ✅ Karpenter provisioning nodes automatically
+- ✅ Traefik handling ingress with TLS
 - ✅ All services accessible via HTTPS
+- ✅ Complete observability stack operational
 
 ---
 
-### Phase 4: Monitoring Stack (via ArgoCD)
+### Phase 3: Cleanup Bootstrap Node (After 24-48 hours)
 
-**Objective**: Deploy full observability stack via GitOps
+**Objective**: Remove temporary bootstrap node after Karpenter is stable
 
-**What ArgoCD Deploys:**
+**When:** After verifying:
+- Karpenter has provisioned nodes successfully
+- All workloads running on Karpenter nodes
+- No pods scheduled on bootstrap node (due to taint)
 
-1. **kube-prometheus-stack** (pre-rendered from Helm):
-   - Prometheus Operator
-   - Prometheus (2 replicas, 50Gi storage, 30-day retention)
-   - Alertmanager (2 replicas, 10Gi storage)
-   - node-exporter (DaemonSet)
-   - kube-state-metrics
-   - **Note**: Grafana disabled (deployed separately)
-
-2. **Grafana**:
-   - 2 replicas, 10Gi storage
-   - Datasources: Prometheus, Loki, Tempo, Alertmanager
-   - Pre-configured dashboards (by ID from Grafana.com):
-     - Kubernetes Cluster (7249)
-     - Node Exporter Full (1860)
-     - Traefik (4475)
-     - ArgoCD (14584)
-     - Loki Logs (13639)
-
-3. **Loki** (distributed mode):
-   - Gateway (2 replicas)
-   - Read (2 replicas, 50Gi storage)
-   - Write (2 replicas, 50Gi storage)
-   - 7-day retention, filesystem storage
-
-4. **Tempo**:
-   - 2 replicas, 50Gi storage
-   - 7-day retention
-   - OTLP receiver for traces
-
-5. **Promtail**:
-   - DaemonSet on all nodes
-   - Scrapes `/var/log/pods`
-   - Sends to Loki gateway
-
-**Component Placement:**
-- All monitoring components use `nodeSelector: workload-type: system`
-- Ensures stable, on-demand nodes
-
-**Rendering Helm to Kustomize:**
-```bash
-# One-time: render kube-prometheus-stack Helm chart to YAML
-helm template prometheus prometheus-community/kube-prometheus-stack \
-  --namespace monitoring \
-  --values monitoring-values.yaml \
-  > k8s/monitoring/prometheus-stack/base/install.yaml
-
-# Commit rendered YAML to Git
-git add k8s/monitoring/
-git commit -m "Add monitoring stack (pre-rendered from Helm)"
-git push
-```
-
-**Deliverables:**
-- ✅ Prometheus scraping all targets
-- ✅ Grafana with datasources and dashboards
-- ✅ Loki ingesting logs
-- ✅ Tempo receiving traces
-- ✅ Promtail collecting logs from all pods
-- ✅ All accessible via IngressRoutes:
-  - https://grafana.aws.wiktorkowalski.pl
-  - https://prometheus.aws.wiktorkowalski.pl
-  - https://alertmanager.aws.wiktorkowalski.pl
-
----
-
-### Phase 5: Kubernetes Dashboard (via ArgoCD)
-
-**Objective**: Deploy web UI for cluster management
-
-**What ArgoCD Deploys:**
-- Kubernetes Dashboard
-- IngressRoute for HTTPS access
-
-**Access:**
-- https://dashboard.aws.wiktorkowalski.pl
-
-**Deliverables:**
-- ✅ Dashboard accessible via HTTPS
-- ✅ Token-based authentication
-
----
-
-### Phase 6: Migration & Cleanup
-
-**Objective**: Complete migration to Karpenter, remove old components
-
-**Migration Steps:**
-
-1. **Scale down EKS managed node groups**:
-   ```terraform
-   # In infra/eks/eks.tf
-   eks_managed_node_groups = {
-     main = {
-       desired_size = 0  # Scale to 0
-       # ... rest unchanged
-     }
-     spot = {
-       desired_size = 0  # Scale to 0
-       # ... rest unchanged
-     }
-   }
+**Steps:**
+1. **Verify Karpenter is healthy**:
+   ```bash
+   kubectl get nodepools
+   kubectl get nodes -L karpenter.sh/nodepool
+   kubectl get pods --all-namespaces -o wide | grep bootstrap
+   # Should see no pods on bootstrap node (except DaemonSets with toleration)
    ```
+
+2. **Remove bootstrap node group**:
+   ```terraform
+   # Edit infra/eks/eks.tf
+   # Delete or comment out the entire eks_managed_node_groups block
+   eks_managed_node_groups = {}  # Empty!
+   ```
+
+3. **Apply change**:
    ```bash
    just apply
    ```
 
-2. **Monitor workload migration**:
-   - Karpenter provisions new nodes
-   - Pods reschedule to Karpenter nodes
-   - Verify all pods running
-
-3. **After 1 week of stability, remove managed node groups**:
-   ```terraform
-   # In infra/eks/eks.tf
-   # Comment out or delete:
-   # eks_managed_node_groups = { ... }
-   ```
-   ```bash
-   just apply
-   ```
-
-4. **Migrate Cert-Manager and External-DNS to ArgoCD**:
-   ```terraform
-   # In infra/addons.tf
-   enable_cert_manager = false
-   enable_external_dns = false
-   ```
-   ```bash
-   just apply
-   ```
-   - ArgoCD already managing these via Kustomize
-
-5. **Verify cleanup**:
-   ```bash
-   # No old resources remaining
-   kubectl get pods -n kube-prometheus-stack  # Should be empty/not exist
-   kubectl get deployment -n kube-system aws-load-balancer-controller  # Should not exist
-   ```
-
 **Deliverables:**
-- ✅ 100% workloads on Karpenter nodes
-- ✅ EKS managed node groups removed
-- ✅ All infrastructure managed via ArgoCD
-- ✅ Cost savings realized
+- ✅ 100% Karpenter-managed infrastructure
+- ✅ No managed node groups remaining
+- ✅ Full cost savings realized
 
 ---
 
@@ -965,64 +822,55 @@ kubectl get nodes -L eks.amazonaws.com/nodegroup
 
 ## Rollback Procedures
 
-### Rollback Phase 2 (ArgoCD)
+**Fresh Deployment Rollback** - Since this is a greenfield deployment, rollback is simpler:
+
+### Complete Rollback (Destroy Everything)
 ```bash
-# Delete ArgoCD
-kubectl delete namespace argocd
-
-# Re-enable in Terraform
-# Edit infra/addons.tf: enable_argocd = true
-just apply
-
-# Cleanup argocd-apps
-rm -rf k8s/argocd-apps/
-git commit -am "Rollback: remove ArgoCD apps"
+# If something goes wrong during deployment, simply destroy:
+cd /path/to/eks-terraform
+just destroy  # Destroys all Terraform resources in reverse order
 ```
 
-### Rollback Phase 3 (Karpenter)
+### Partial Rollback (Keep Cluster, Remove GitOps Components)
+
+**Rollback ArgoCD and All Apps:**
 ```bash
-# Scale up managed node groups
-# Edit infra/eks/eks.tf: desired_size = 2
+# Delete all ArgoCD-managed apps
+kubectl delete applications --all -n argocd
+
+# Delete ArgoCD itself
+kubectl delete namespace argocd
+
+# Cleanup k8s manifests from Git (optional)
+rm -rf k8s/
+git commit -am "Rollback: remove all k8s manifests"
+git push
+```
+
+**Rollback to Managed Nodes (Remove Karpenter):**
+```bash
+# 1. Scale up bootstrap node to handle workloads
+# Edit infra/eks/eks.tf
+eks_managed_node_groups = {
+  bootstrap = {
+    desired_size = 2  # Scale up
+    max_size     = 3
+    # ... rest unchanged
+  }
+}
+
+# 2. Apply change
 just apply
 
-# Drain Karpenter nodes
+# 3. Drain Karpenter nodes
 kubectl get nodes -l karpenter.sh/nodepool -o name | \
   xargs -I {} kubectl drain {} --ignore-daemonsets --delete-emptydir-data
 
-# Delete Karpenter NodePools
+# 4. Delete Karpenter NodePools
 kubectl delete nodepools --all
 
-# Disable Karpenter in Terraform
+# 5. Disable Karpenter in Terraform (optional)
 # Edit infra/addons.tf: enable_karpenter = false
-just apply
-```
-
-### Rollback Phase 3 (Traefik)
-```bash
-# Update ingresses to use ALB
-kubectl get ingress --all-namespaces -o json | \
-  jq '.items[] | select(.spec.ingressClassName=="traefik")' | \
-  kubectl patch -f - -p '{"spec":{"ingressClassName":"alb"}}'
-
-# Delete Traefik
-kubectl delete namespace traefik-system
-
-# Re-enable ALB controller
-# Edit infra/addons.tf: enable_aws_load_balancer_controller = true
-just apply
-
-# Destroy NLB
-# Comment out infra/eks/nlb.tf resources
-just apply
-```
-
-### Rollback Phase 4 (Monitoring)
-```bash
-# Delete monitoring namespace
-kubectl delete namespace monitoring
-
-# Re-enable EKS Blueprints monitoring
-# Edit infra/addons.tf: enable_kube_prometheus_stack = true
 just apply
 ```
 

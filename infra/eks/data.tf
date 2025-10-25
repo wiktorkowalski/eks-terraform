@@ -6,7 +6,13 @@ data "aws_vpc" "vpc" {
 
 data "aws_subnets" "private" {
   tags = {
-    "private" = "true" # TODO: add more specific tags
+    "private" = "true"
+  }
+}
+
+data "aws_subnets" "public" {
+  tags = {
+    "public" = "true"
   }
 }
 

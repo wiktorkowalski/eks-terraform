@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: traefik-system
+
+resources:
+  - namespace.yaml
+  - rbac.yaml
+  - configmap.yaml
+  - service.yaml
+  - daemonset.yaml
+  - ../config/middleware-secure-headers.yaml
+  - ../config/middleware-redirect-https.yaml
+  - ../config/middleware-rate-limit.yaml
+  - ../config/middleware-compress.yaml
+  - ../config/tls-options.yaml
+  - ../config/ingressroutes/argocd.yaml
+  - ../config/ingressroutes/grafana.yaml
+  - ../config/ingressroutes/prometheus.yaml
+  - ../config/ingressroutes/alertmanager.yaml
+  - ../config/ingressroutes/dashboard.yaml

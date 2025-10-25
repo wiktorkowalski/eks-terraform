@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+resources:
+  - namespace.yaml
+  # - manifests.yaml  # Generated via: helm template (see k8s/monitoring/README.md)
+
+# Note: Run the Helm template command from README.md to generate manifests.yaml
+# Alternatively, use ArgoCD with Helm source directly

@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: argocd
+
+resources:
+  - namespace.yaml
+  - install.yaml
+  # ingress-route.yaml will be added later after Traefik is deployed
+
+# ConfigMap to enable insecure mode (TLS termination at Traefik)
+configMapGenerator:
+  - name: argocd-cmd-params-cm
+    behavior: merge
+    literals:
+      - server.insecure="true"

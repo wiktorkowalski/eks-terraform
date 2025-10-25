@@ -21,3 +21,6 @@ resource "aws_route53_record" "ns" {
   #   prevent_destroy = true
   # }
 }
+
+# Note: Wildcard DNS record (*.aws.wiktorkowalski.pl) is created in infra/eks/nlb.tf
+# This is because the NLB is created there, avoiding cross-module dependencies

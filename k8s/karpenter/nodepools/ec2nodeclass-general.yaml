@@ -1,0 +1,35 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: general
+  namespace: karpenter
+spec:
+  amiSelectorTerms:
+    - alias: al2023@latest
+  role: "KarpenterNodeRole-eks-terraform"
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: "eks-terraform"
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: "eks-terraform"
+  userData: |
+    #!/bin/bash
+    echo "eks-terraform" > /etc/eks/cluster-name
+  tags:
+    Name: "karpenter-general-eks-terraform"
+    Environment: "production"
+    ManagedBy: "karpenter"
+    NodePool: "general"
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpPutResponseHopLimit: 2
+    httpTokens: required
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 20Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true

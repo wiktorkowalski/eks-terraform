@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-config
+  namespace: traefik-system
+data:
+  traefik.yaml: |
+    global:
+      checkNewVersion: false
+      sendAnonymousUsage: false
+
+    entryPoints:
+      web:
+        address: ":80"
+        http:
+          redirections:
+            entrypoint:
+              to: websecure
+              scheme: https
+              permanent: true
+      websecure:
+        address: ":443"
+        http:
+          tls:
+            certResolver: letsencrypt
+      metrics:
+        address: ":8080"
+
+    providers:
+      kubernetesCRD:
+        allowCrossNamespace: true
+        allowExternalNameServices: true
+      kubernetesIngress:
+        allowExternalNameServices: true
+
+    api:
+      dashboard: true
+      insecure: true
+
+    metrics:
+      prometheus:
+        addEntryPointsLabels: true
+        addRoutersLabels: true
+        addServicesLabels: true
+
+    ping:
+      entryPoint: web
+
+    log:
+      level: INFO
+      format: json
+
+    accessLog:
+      format: json
+      fields:
+        defaultMode: keep
+        names:
+          ClientUsername: drop
+        headers:
+          defaultMode: keep
+          names:
+            Authorization: drop
+
+    certificatesResolvers:
+      letsencrypt:
+        acme:
+          email: contact@wiktorkowalski.pl
+          storage: /data/acme.json
+          dnsChallenge:
+            provider: route53
+            delayBeforeCheck: 30
+            resolvers:
+              - "8.8.8.8:53"
+              - "8.8.4.4:53"

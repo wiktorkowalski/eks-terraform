@@ -1,0 +1,58 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: karpenter
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # Karpenter Helm Chart
+    - repoURL: oci://public.ecr.aws/karpenter
+      chart: karpenter
+      targetRevision: 0.37.0
+      helm:
+        releaseName: karpenter
+        valuesObject:
+          settings:
+            clusterName: eks-terraform
+            clusterEndpoint: "" # Will be set via external values
+            interruptionQueue: eks-terraform-karpenter
+          serviceAccount:
+            annotations:
+              eks.amazonaws.com/role-arn: "" # Will be set via external values
+          controller:
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 512Mi
+          nodeSelector:
+            workload-type: bootstrap
+          tolerations:
+            - key: node.kubernetes.io/bootstrap
+              operator: Exists
+              effect: NoSchedule
+    # NodePools and EC2NodeClasses from Git
+    - repoURL: https://github.com/wiktorkowalski/eks-terraform.git
+      targetRevision: HEAD
+      path: k8s/karpenter/nodepools
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: karpenter
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

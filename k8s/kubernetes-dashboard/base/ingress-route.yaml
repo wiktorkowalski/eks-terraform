@@ -12,6 +12,8 @@ spec:
       services:
         - name: kubernetes-dashboard
           port: 443
+          scheme: https
+          serversTransport: dashboard-transport
       middlewares:
         - name: secure-headers
           namespace: traefik-system

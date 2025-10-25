@@ -8,4 +8,5 @@ resources:
   - install.yaml
   - admin-user.yaml
   - certificate.yaml
+  - servers-transport.yaml
   - ingress-route.yaml

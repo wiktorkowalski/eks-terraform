@@ -1,6 +1,27 @@
 # Network Load Balancer for Traefik ingress
 # This NLB will route traffic to Traefik DaemonSet running on NodePort
 
+# Security group rules to allow NLB traffic to reach NodePorts
+resource "aws_security_group_rule" "node_nlb_ingress_http" {
+  description       = "Allow NLB to reach Traefik HTTP NodePort"
+  type              = "ingress"
+  from_port         = 30080
+  to_port           = 30080
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = module.eks.node_security_group_id
+}
+
+resource "aws_security_group_rule" "node_nlb_ingress_https" {
+  description       = "Allow NLB to reach Traefik HTTPS NodePort"
+  type              = "ingress"
+  from_port         = 30443
+  to_port           = 30443
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = module.eks.node_security_group_id
+}
+
 resource "aws_lb" "traefik" {
   name               = "${local.cluster_name}-traefik-nlb"
   internal           = false

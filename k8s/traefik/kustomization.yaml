@@ -21,6 +21,9 @@ resources:
   - config/middleware-compress.yaml
   - config/tls-options.yaml
 
+  # Traefik Dashboard
+  - config/traefik-dashboard-ingressroute.yaml
+
   # IngressRoutes are managed by their respective apps:
   # - ArgoCD IngressRoute: managed by argocd app
   # - Monitoring IngressRoutes: managed by monitoring apps

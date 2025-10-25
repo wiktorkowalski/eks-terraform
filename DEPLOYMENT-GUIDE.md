@@ -117,7 +117,6 @@ watch kubectl get applications -n argocd
 # - karpenter (NodePools)
 # - traefik (Ingress)
 # - cert-manager (TLS)
-# - external-dns (Route53)
 # - monitoring (Prometheus, Grafana, etc.)
 # - kubernetes-dashboard
 
@@ -158,13 +157,13 @@ helm repo update
 
 Once all applications are synced and healthy:
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| ArgoCD | https://argocd.aws.wiktorkowalski.pl | admin / (from secret) |
-| Grafana | https://grafana.aws.wiktorkowalski.pl | admin / (from secret `grafana-admin-secret`) |
-| Prometheus | https://prometheus.aws.wiktorkowalski.pl | No auth |
-| Alertmanager | https://alertmanager.aws.wiktorkowalski.pl | No auth |
-| Kubernetes Dashboard | https://dashboard.aws.wiktorkowalski.pl | Token-based |
+| Service              | URL                                        | Credentials                                  |
+| -------------------- | ------------------------------------------ | -------------------------------------------- |
+| ArgoCD               | https://argocd.aws.wiktorkowalski.pl       | admin / (from secret)                        |
+| Grafana              | https://grafana.aws.wiktorkowalski.pl      | admin / (from secret `grafana-admin-secret`) |
+| Prometheus           | https://prometheus.aws.wiktorkowalski.pl   | No auth                                      |
+| Alertmanager         | https://alertmanager.aws.wiktorkowalski.pl | No auth                                      |
+| Kubernetes Dashboard | https://dashboard.aws.wiktorkowalski.pl    | Token-based                                  |
 
 ### Get Kubernetes Dashboard Token
 
@@ -223,9 +222,6 @@ kubectl get pods -n traefik-system -o wide
 
 # Cert-Manager issuer ready
 kubectl get clusterissuer letsencrypt
-
-# External-DNS running
-kubectl get pods -n external-dns
 
 # Check TLS certificates
 kubectl get certificates --all-namespaces

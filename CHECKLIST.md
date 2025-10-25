@@ -13,7 +13,6 @@ All ArgoCD Application CRDs reference the Git repository. Update the `repoURL` i
 # - k8s/argocd-apps/karpenter-app.yaml
 # - k8s/argocd-apps/traefik-app.yaml
 # - k8s/argocd-apps/cert-manager-app.yaml
-# - k8s/argocd-apps/external-dns-app.yaml
 # - k8s/argocd-apps/monitoring-app.yaml
 # - k8s/argocd-apps/dashboard-app.yaml
 # - k8s/monitoring/*.yaml

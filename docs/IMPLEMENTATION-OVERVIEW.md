@@ -50,7 +50,6 @@ Traefik DaemonSet (all nodes, NodePort 30080/30443)
 │  ├── karpenter/ (NodePools)                               │
 │  ├── traefik/ (DaemonSet)                                 │
 │  ├── cert-manager/ (Let's Encrypt)                        │
-│  ├── external-dns/ (Route53)                              │
 │  ├── monitoring/ (observability stack)                    │
 │  └── kubernetes-dashboard/                                │
 │                                                            │
@@ -68,7 +67,6 @@ Traefik DaemonSet (all nodes, NodePort 30080/30443)
 - **GitOps**: ArgoCD with app-of-apps pattern (self-managed)
 - **Observability**: kube-prometheus-stack + Loki + Tempo + Promtail
 - **TLS**: Cert-Manager + Let's Encrypt (DNS challenge via Route53)
-- **DNS**: External-DNS for automatic Route53 updates
 
 ### Key Decisions
 - ✅ **Fresh deployment** - No migration, clean architecture from day 1
@@ -154,7 +152,6 @@ eks-terraform/
     │   ├── karpenter-app.yaml
     │   ├── traefik-app.yaml
     │   ├── cert-manager-app.yaml
-    │   ├── external-dns-app.yaml
     │   ├── monitoring-app.yaml     # App-of-apps for monitoring stack
     │   └── dashboard-app.yaml
     │
@@ -195,14 +192,6 @@ eks-terraform/
     │       ├── namespace.yaml
     │       ├── install.yaml         # cert-manager CRDs + components
     │       ├── cluster-issuer.yaml  # Let's Encrypt production
-    │       └── kustomization.yaml
-    │
-    ├── external-dns/
-    │   └── base/
-    │       ├── namespace.yaml
-    │       ├── deployment.yaml      # External-DNS for Route53
-    │       ├── rbac.yaml
-    │       ├── configmap.yaml
     │       └── kustomization.yaml
     │
     ├── monitoring/
@@ -369,7 +358,6 @@ From `k8s/argocd-apps/` directory:
 - ✅ **Karpenter** - 3 NodePools (general, stateful, system)
 - ✅ **Traefik** - DaemonSet with middlewares + IngressRoutes
 - ✅ **Cert-Manager** - Let's Encrypt ClusterIssuer
-- ✅ **External-DNS** - Route53 integration
 - ✅ **Monitoring** - Prometheus, Grafana, Loki, Tempo, Promtail, Alertmanager
 - ✅ **Kubernetes Dashboard**
 
@@ -633,7 +621,6 @@ Root App (k8s/argocd/apps/root-app.yaml)
   ├── karpenter-app.yaml
   ├── traefik-app.yaml
   ├── cert-manager-app.yaml
-  ├── external-dns-app.yaml
   ├── monitoring-app.yaml (App-of-apps for monitoring)
   │   ↓
   │   Points to: k8s/monitoring/
@@ -677,14 +664,14 @@ git push
 
 After complete deployment:
 
-| Service | URL | Purpose |
-|---------|-----|---------|
-| ArgoCD | https://argocd.aws.wiktorkowalski.pl | GitOps management UI |
-| Grafana | https://grafana.aws.wiktorkowalski.pl | Metrics/logs/traces visualization |
-| Prometheus | https://prometheus.aws.wiktorkowalski.pl | Metrics query interface |
-| Alertmanager | https://alertmanager.aws.wiktorkowalski.pl | Alert management |
-| Traefik Dashboard | https://traefik.aws.wiktorkowalski.pl | Traefik ingress dashboard (with auth) |
-| Kubernetes Dashboard | https://dashboard.aws.wiktorkowalski.pl | Kubernetes web UI |
+| Service              | URL                                        | Purpose                               |
+| -------------------- | ------------------------------------------ | ------------------------------------- |
+| ArgoCD               | https://argocd.aws.wiktorkowalski.pl       | GitOps management UI                  |
+| Grafana              | https://grafana.aws.wiktorkowalski.pl      | Metrics/logs/traces visualization     |
+| Prometheus           | https://prometheus.aws.wiktorkowalski.pl   | Metrics query interface               |
+| Alertmanager         | https://alertmanager.aws.wiktorkowalski.pl | Alert management                      |
+| Traefik Dashboard    | https://traefik.aws.wiktorkowalski.pl      | Traefik ingress dashboard (with auth) |
+| Kubernetes Dashboard | https://dashboard.aws.wiktorkowalski.pl    | Kubernetes web UI                     |
 
 **Default Credentials:**
 - ArgoCD: `admin` / (get from secret: `argocd-initial-admin-secret`)
@@ -695,21 +682,21 @@ After complete deployment:
 ## Success Metrics
 
 ### Cost Savings (Expected)
-| Component | Savings | Explanation |
-|-----------|---------|-------------|
-| **Karpenter** | 30-50% | Better instance selection, spot optimization, bin-packing |
-| **Spot Instances** | 50-70% | On general-purpose workloads (vs on-demand) |
-| **NLB vs ALB** | 20-30% | Lower per-hour cost, no LCU charges for Layer 4 |
-| **ARM64 Graviton** | 20% | ARM64 instances cheaper than x86 equivalents |
-| **Total Estimated** | 35-55% | Overall infrastructure cost reduction |
+| Component           | Savings | Explanation                                               |
+| ------------------- | ------- | --------------------------------------------------------- |
+| **Karpenter**       | 30-50%  | Better instance selection, spot optimization, bin-packing |
+| **Spot Instances**  | 50-70%  | On general-purpose workloads (vs on-demand)               |
+| **NLB vs ALB**      | 20-30%  | Lower per-hour cost, no LCU charges for Layer 4           |
+| **ARM64 Graviton**  | 20%     | ARM64 instances cheaper than x86 equivalents              |
+| **Total Estimated** | 35-55%  | Overall infrastructure cost reduction                     |
 
 ### Performance Improvements
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| **Node Provisioning** | 3-5 minutes | <60 seconds | 5x faster |
-| **Autoscaling Response** | Minutes | Seconds | Sub-minute pod-to-node |
-| **Ingress Latency** | 10-20ms (ALB) | <10ms (NLB) | Layer 4 vs Layer 7 |
-| **TLS Handshake** | At ALB | At Traefik | Flexible SSL policies |
+| Metric                   | Before        | After       | Improvement            |
+| ------------------------ | ------------- | ----------- | ---------------------- |
+| **Node Provisioning**    | 3-5 minutes   | <60 seconds | 5x faster              |
+| **Autoscaling Response** | Minutes       | Seconds     | Sub-minute pod-to-node |
+| **Ingress Latency**      | 10-20ms (ALB) | <10ms (NLB) | Layer 4 vs Layer 7     |
+| **TLS Handshake**        | At ALB        | At Traefik  | Flexible SSL policies  |
 
 ### Reliability Improvements
 - **GitOps Coverage**: 100% (everything in Git)
@@ -770,9 +757,6 @@ kubectl get pods -n traefik-system -o wide
 
 # Cert-Manager issuer ready
 kubectl get clusterissuer
-
-# External-DNS running
-kubectl get pods -n external-dns
 ```
 
 ### Phase 4 Validation (Monitoring)
@@ -888,7 +872,6 @@ just apply
 ### Networking & Ingress
 - **Network Load Balancer (NLB)**: Layer 4 load balancing
 - **Traefik v3.0**: Advanced ingress controller (DaemonSet)
-- **External-DNS**: Automated Route53 DNS management
 - **Cert-Manager**: SSL certificate automation (Let's Encrypt)
 
 ### Monitoring & Observability

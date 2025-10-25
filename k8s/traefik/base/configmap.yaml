@@ -11,7 +11,7 @@ data:
 
     entryPoints:
       web:
-        address: ":80"
+        address: ":8000"
         http:
           redirections:
             entrypoint:
@@ -19,7 +19,7 @@ data:
               scheme: https
               permanent: true
       websecure:
-        address: ":443"
+        address: ":8443"
         http:
           tls:
             certResolver: letsencrypt

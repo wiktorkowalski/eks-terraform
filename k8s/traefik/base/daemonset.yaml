@@ -41,10 +41,10 @@ spec:
             - --configFile=/config/traefik.yaml
           ports:
             - name: web
-              containerPort: 80
+              containerPort: 8000
               protocol: TCP
             - name: websecure
-              containerPort: 443
+              containerPort: 8443
               protocol: TCP
             - name: metrics
               containerPort: 8080

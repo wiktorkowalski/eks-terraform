@@ -1,19 +1,34 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: monitoring
+  name: tempo
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    repoURL: https://github.com/wiktorkowalski/eks-terraform.git
-    targetRevision: HEAD
-    path: k8s/monitoring
+    repoURL: https://grafana.github.io/helm-charts
+    chart: tempo
+    targetRevision: 1.10.5
+    helm:
+      releaseName: tempo
+      values: |
+        tempo:
+          replicas: 1
+          retention: 168h  # 7 days
+          storage:
+            trace:
+              backend: local
+
+        persistence:
+          enabled: true
+          size: 50Gi
+
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd
+    namespace: monitoring
+
   syncPolicy:
     automated:
       prune: true

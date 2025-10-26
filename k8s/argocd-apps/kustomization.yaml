@@ -8,5 +8,9 @@ resources:
   - karpenter-app.yaml
   - traefik-app.yaml
   - cert-manager-app.yaml
-  - monitoring-app.yaml
   - dashboard-app.yaml
+  # Monitoring stack
+  - kube-prometheus-stack-app.yaml
+  - loki-app.yaml
+  - tempo-app.yaml
+  - promtail-app.yaml

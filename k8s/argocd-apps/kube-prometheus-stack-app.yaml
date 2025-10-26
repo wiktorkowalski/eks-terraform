@@ -1,0 +1,90 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # Helm chart for kube-prometheus-stack
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 65.8.1
+      helm:
+        releaseName: kube-prometheus-stack
+        values: |
+          # Enable Grafana (included in kube-prometheus-stack)
+          grafana:
+            enabled: true
+            adminPassword: grafana
+            persistence:
+              enabled: true
+              size: 10Gi
+            # Grafana datasources (auto-configured for Prometheus)
+            additionalDataSources:
+              - name: Loki
+                type: loki
+                url: http://loki-gateway.monitoring:3100
+                access: proxy
+              - name: Tempo
+                type: tempo
+                url: http://tempo.monitoring:3100
+                access: proxy
+
+          # Prometheus configuration
+          prometheus:
+            prometheusSpec:
+              replicas: 1
+              retention: 30d
+              storageSpec:
+                volumeClaimTemplate:
+                  spec:
+                    accessModes: ["ReadWriteOnce"]
+                    resources:
+                      requests:
+                        storage: 50Gi
+
+          # Alertmanager configuration
+          alertmanager:
+            alertmanagerSpec:
+              replicas: 1
+              storage:
+                volumeClaimTemplate:
+                  spec:
+                    accessModes: ["ReadWriteOnce"]
+                    resources:
+                      requests:
+                        storage: 10Gi
+
+          # Node exporter (collects node metrics)
+          nodeExporter:
+            enabled: true
+
+          # Kube-state-metrics (collects Kubernetes metrics)
+          kubeStateMetrics:
+            enabled: true
+
+    # Ingress routes from Git
+    - repoURL: https://github.com/wiktorkowalski/eks-terraform.git
+      targetRevision: HEAD
+      path: k8s/kube-prometheus-stack/base
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

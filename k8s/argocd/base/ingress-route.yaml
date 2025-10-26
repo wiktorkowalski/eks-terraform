@@ -16,4 +16,4 @@ spec:
         - name: secure-headers
           namespace: traefik-system
   tls:
-    certResolver: letsencrypt
+    secretName: argocd-tls

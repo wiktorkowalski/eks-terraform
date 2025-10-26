@@ -22,6 +22,8 @@ resources:
   - config/tls-options.yaml
 
   # Traefik Dashboard
+  - config/traefik-dashboard-auth-middleware.yaml
+  - config/traefik-dashboard-certificate.yaml
   - config/traefik-dashboard-ingressroute.yaml
 
   # IngressRoutes are managed by their respective apps:

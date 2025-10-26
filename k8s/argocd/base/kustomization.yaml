@@ -6,6 +6,7 @@ namespace: argocd
 resources:
   - namespace.yaml
   - install.yaml
+  - certificate.yaml
   - ingress-route.yaml
 
 # ConfigMap to enable insecure mode (TLS termination at Traefik)

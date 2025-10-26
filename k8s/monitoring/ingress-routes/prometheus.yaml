@@ -1,21 +1,19 @@
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: grafana
+  name: prometheus
   namespace: monitoring
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`grafana.aws.wiktorkowalski.pl`)
+    - match: Host(`prometheus.aws.wiktorkowalski.pl`)
       kind: Rule
       services:
-        - name: grafana
-          port: 80
+        - name: kube-prometheus-stack-prometheus
+          port: 9090
       middlewares:
         - name: secure-headers
-          namespace: traefik-system
-        - name: compress
           namespace: traefik-system
   tls:
     certResolver: letsencrypt

@@ -14,8 +14,3 @@ resources:
   - ../config/middleware-rate-limit.yaml
   - ../config/middleware-compress.yaml
   - ../config/tls-options.yaml
-  - ../config/ingressroutes/argocd.yaml
-  - ../config/ingressroutes/grafana.yaml
-  - ../config/ingressroutes/prometheus.yaml
-  - ../config/ingressroutes/alertmanager.yaml
-  - ../config/ingressroutes/dashboard.yaml

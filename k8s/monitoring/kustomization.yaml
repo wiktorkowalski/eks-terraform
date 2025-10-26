@@ -7,3 +7,6 @@ resources:
   - loki-app.yaml
   - tempo-app.yaml
   - promtail-app.yaml
+  - ingress-routes/grafana.yaml
+  - ingress-routes/prometheus.yaml
+  - ingress-routes/alertmanager.yaml

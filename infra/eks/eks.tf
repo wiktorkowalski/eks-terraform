@@ -71,13 +71,11 @@ module "eks" {
     }
 
     # Storage - EBS CSI Driver
-    # Note: Commented out for initial apply to avoid circular dependency
-    # Uncomment and apply again after cluster is created
-    # aws-ebs-csi-driver = {
-    #   most_recent              = true
-    #   resolve_conflicts        = "OVERWRITE"
-    #   service_account_role_arn = aws_iam_role.ebs_csi_driver.arn
-    # }
+    aws-ebs-csi-driver = {
+      most_recent              = true
+      resolve_conflicts        = "OVERWRITE"
+      service_account_role_arn = aws_iam_role.ebs_csi_driver.arn
+    }
 
     # Metrics
     eks-pod-identity-agent = {

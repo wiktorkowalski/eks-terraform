@@ -3,7 +3,7 @@ module "eks" {
   version = "20.34.0"
 
   cluster_name              = local.cluster_name
-  cluster_version           = "1.30"
+  cluster_version           = "1.34"
   cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
   cluster_endpoint_public_access  = true

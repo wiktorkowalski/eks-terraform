@@ -22,6 +22,7 @@ spec:
             persistence:
               enabled: true
               size: 10Gi
+              storageClassName: gp2
             # Grafana datasources (auto-configured for Prometheus)
             additionalDataSources:
               - name: Loki
@@ -41,6 +42,7 @@ spec:
               storageSpec:
                 volumeClaimTemplate:
                   spec:
+                    storageClassName: gp2
                     accessModes: ["ReadWriteOnce"]
                     resources:
                       requests:
@@ -53,6 +55,7 @@ spec:
               storage:
                 volumeClaimTemplate:
                   spec:
+                    storageClassName: gp2
                     accessModes: ["ReadWriteOnce"]
                     resources:
                       requests:
